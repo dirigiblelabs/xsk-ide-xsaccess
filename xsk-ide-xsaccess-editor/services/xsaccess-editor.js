@@ -15,7 +15,7 @@ exports.getEditor = function () {
 		"name": "XSAccess",
 		"factory": "frame",
 		"region": "center-top",
-		"label": "XSAccess",
+		"label": "XS Access",
 		"defaultEditor": true,
 		"link": "../xsk-ide-xsaccess-editor/editor/editor.html",
 		"contentTypes": ["application/json+xsaccess"]

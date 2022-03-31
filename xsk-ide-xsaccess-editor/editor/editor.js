@@ -14,26 +14,6 @@ angular.module('page', [])
 
     let messageHub = new FramesMessageHub();
     let contents;
-    let scheduleIndex;
-    let oldKey;
-
-    $scope.openNewDialog = function (index) {
-      $scope.actionType = 'new';
-      $scope.entity = {};
-      toggleEntityModal();
-      console.log("LOG Parameter will be add to shedule with index " + index)
-      scheduleIndex = index;
-
-    };
-
-    $scope.openEditDialog = function (index, key, value) {
-      console.log("OpenEditDialog", index, key, value);
-      $scope.actionType = 'update';
-      oldKey = key;
-      scheduleIndex = index;
-      $scope.entity = { name: key, description: value };
-      toggleEntityModal();
-    };
 
     function toggleEntityModal() {
       $('#entityModal').modal('toggle');
@@ -66,73 +46,74 @@ angular.module('page', [])
       }
     }
 
+    $scope.initJSONcontent = function () {
+      if (!('allowMethods' in $scope.data.cors))
+        $scope.data.cors = {
+          ...$scope.data.cors,
+          allowMethods: $scope.allAllowedMethods,
+          allowOrigin: ["*", "*.sap.com"],
+          maxAge: 3600,
+          allowHeaders: [''],
+          exposeHeaders: ['']
+        };
+      if ($scope.data.headers.customHeaders && $scope.data.headers.customHeaders)
+        $scope.data.headers.customHeaders = $scope.data.headers.customHeaders.map((x) => {
+          return {
+            ...x,
+            thevalue: x.value.substr(0, 10) == 'ALLOW-FROM' ? 'ALLOW-FROM' : x.value,
+            url: x.value.substr(0, 10) == 'ALLOW-FROM' ? x.value.substr(11) : ''
+          }
+        })
+    }
+
     function load() {
       getViewParameters();
       contents = loadContents($scope.file);
-      $scope.job = JSON.parse(contents);
+      $scope.data = JSON.parse(contents);
+      $scope.anonymous_connection_allowed = $scope.data.anonymous_connection ? true : false;
+      $scope.allAllowedMethods = ["GET", "POST", "HEAD", "OPTIONS"];
+      $scope.initJSONcontent();
+
     }
 
     load();
 
-    $scope.addParameter = function (key, value) {
-      console.log("LOG Index ", scheduleIndex, "  KEY. ", key, "  Value ", value)
-      $scope.job.schedules[scheduleIndex].parameter[key] = value;
-      toggleEntityModal();
-    }
-    $scope.deleteParameter = function (index, key) {
-      console.log("Shedule: " + index + " Key " + key);
-      delete $scope.job.schedules[index].parameter[key];
-      $scope.save();
+    function updateObjectNestedProp(obj, value, propPath) {
+      const [head, ...rest] = propPath.split('.');
+      !rest.length
+        ? obj[head] = value
+        : updateObjectNestedProp(obj[head], value, rest.join('.'));
     }
 
-    $scope.deleteSchedule = function (scheduleIndex) {
-      console.log("Schedule to delete" + scheduleIndex);
-      $scope.job.schedules.splice(scheduleIndex, 1);
-      console.log("Schedule to delete" + scheduleIndex);
-      $scope.save();
+    function getNestedValue(obj, path) {
+      return path.split('.').reduce(function (prev, curr) {
+        return prev[curr];
+      }, obj || this);
     }
-    $scope.addScheduler = function () {
-      var schedule = {
-        "description": "",
-        "xscron": "",
-        "parameter": {}
-      };
-      $scope.job.schedules.push(schedule);
-      $scope.save();
-    };
 
-    $scope.hoverIn = function () {
-      this.hoverEdit = true;
-    };
+    $scope.deleteInList = function (path, index) {
+      let newKeyValue = getNestedValue($scope.data, path).filter((val, num) => num != index);
+      if (!newKeyValue.length) newKeyValue.push('');
+      updateObjectNestedProp(
+        $scope.data,
+        newKeyValue,
+        path);
+    }
 
-    $scope.hoverOut = function () {
-      this.hoverEdit = false;
-    };
+    $scope.addInList = function (path, value) {
+      let newKeyValue = getNestedValue($scope.data, path);
+      newKeyValue.push(value);
+      updateObjectNestedProp($scope.data,
+        newKeyValue,
+        path);
+    }
 
-    $scope.create = function () {
-      let exists = $scope.roles.filter(function (e) {
-        return e.name === $scope.entity.name;
-      });
-      if (exists.length === 0) {
-        $scope.roles.push($scope.entity);
-        toggleEntityModal();
-      } else {
-        $scope.error = "Role with a name [" + $scope.entity.name + "] already exists!";
-      }
-    };
-
-    $scope.update = function (key, value) {
-      console.log("UPDATE ", key, value);
-      $scope.deleteParameter(scheduleIndex, oldKey)
-      $scope.addParameter(key, value);
-    };
-
-    $scope.delete = function () {
-      $scope.roles = $scope.roles.filter(function (e) {
-        return e !== $scope.entity;
-      });
-      toggleEntityModal();
-    };
+    $scope.trigCorsMethod = function (method) {
+      if (!$scope.data.cors.allowMethods.includes(method))
+        $scope.data.cors.allowMethods.push(method);
+      else
+        $scope.data.cors.allowMethods = $scope.data.cors.allowMethods.filter((x) => x != method);
+    }
 
 
     function saveContents(text) {
@@ -153,17 +134,27 @@ angular.module('page', [])
       }
     }
 
-    $scope.save = function () {
-      contents = angular.toJson($scope.job);
-      saveContents(contents);
-    };
+    $scope.createSaveContent = function () {
+      let contents = JSON.parse(angular.toJson($scope.data));
+      if (!contents.cors.enabled) contents.cors = { enabled: false };
+      if (!contents.headers.enabled)
+        contents.headers = { enabled: false };
+      else
+        contents.headers.customHeaders = contents.headers.customHeaders.map((x) => {
+          return { name: x.name, value: x.thevalue + (x.thevalue == 'ALLOW-FROM' ? " " + x.url : '') };
+        });
+      return JSON.stringify(contents, null, 4);
+    }
 
-    $scope.$watch(function () {
-      let xsjob = angular.toJson($scope.job);
-      if (contents !== xsjob) {
-        messageHub.post({ data: $scope.file }, 'editor.file.dirty');
-      }
-    });
+    $scope.previewJson = function () {
+      let content = $scope.createSaveContent();
+      alert('FUNDAMENTAL STYLES MODAL WILL SOON BE USED FOR THIS :)' + "\n" + content);
+    }
+
+    $scope.save = function () {
+      let content = $scope.createSaveContent();
+      saveContents(content);
+    };
 
 
     $(function () {
