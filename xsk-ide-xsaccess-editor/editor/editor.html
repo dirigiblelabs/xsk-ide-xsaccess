@@ -324,11 +324,31 @@
           </div>
         </div>
 
-        <div class="row page-header">
-          <button type="button" class="btn btn-secondary" ng-click="previewJson()">Preview JSON</button>
-          <button type="button" class="btn btn-primary" ng-click="save()">Save</button>
+        <div class="row  page-footer">
+          <p> <button type="button" class="btn btn-secondary mr-2 mb-5" ng-click="previewJson()" ng-show=true
+              data-toggle="modal" data-target="#previewJSON">Preview JSON</button>
+            <button type="button" class="btn btn-primary mb-5" ng-click="save()">Save</button>
+          </p>
         </div>
       </form>
+    </div>
+
+    <div class="dirigible-modal modal fade" id="previewJSON" tabindex="-1" role="dialog"
+      aria-labelledby="previewJSONlabel" aria-hidden="false">
+      <div class="modal-header">
+        <h4>Preview of {{file}}</h4>
+        <label class="col-xs-3 col-form-label">Preview is based on settings currently selected, not on saved in file
+          JSON content!</label>
+        <button class="btn btn-default pull-right" data-dismiss="modal">Close preview</button>
+      </div>
+      <div class="modal-body">
+        <pre>
+        {{formToJSON}}
+        </pre>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-default" data-dismiss="modal">Close preview</button>
+      </div>
     </div>
 
     <script type="text/javascript" src="editor.js"></script>

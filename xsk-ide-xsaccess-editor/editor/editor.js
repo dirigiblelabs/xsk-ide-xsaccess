@@ -136,19 +136,28 @@ angular.module('page', [])
 
     $scope.createSaveContent = function () {
       let contents = JSON.parse(angular.toJson($scope.data));
-      if (!contents.cors.enabled) contents.cors = { enabled: false };
-      if (!contents.headers.enabled)
+      if (contents.cors.enabled) {
+        contents.cors.allowOrigin = contents.cors.allowOrigin.filter((x) => x.trim());
+        contents.cors.allowHeaders = contents.cors.allowHeaders.filter((x) => x.trim());
+        contents.cors.exposeHeaders = contents.cors.exposeHeaders.filter((x) => x.trim());
+      } else {
+        contents.cors = { enabled: false };
+      }
+      if (!contents.headers.enabled) {
         contents.headers = { enabled: false };
-      else
+      } else {
         contents.headers.customHeaders = contents.headers.customHeaders.map((x) => {
           return { name: x.name, value: x.thevalue + (x.thevalue == 'ALLOW-FROM' ? " " + x.url : '') };
-        });
+        }).filter((x) => x.name.trim());
+      }
+      contents.authorization = contents.authorization.filter((x) => x.trim());
+      contents.mime_mapping = contents.mime_mapping.filter((x) => x.extension.trim() && x.mimetype.trim());
+      contents.rewrite_rules = contents.rewrite_rules.filter((x) => x.source.trim() && x.target.trim());
       return JSON.stringify(contents, null, 4);
     }
 
     $scope.previewJson = function () {
-      let content = $scope.createSaveContent();
-      alert('FUNDAMENTAL STYLES MODAL WILL SOON BE USED FOR THIS :)' + "\n" + content);
+      $scope.formToJSON = $scope.createSaveContent();
     }
 
     $scope.save = function () {
