@@ -56,7 +56,7 @@ angular.module('page', [])
           allowHeaders: [''],
           exposeHeaders: ['']
         };
-      if ($scope.data.headers.customHeaders && $scope.data.headers.customHeaders)
+      if ($scope.data.headers.customHeaders && $scope.data.headers.customHeaders.length)
         $scope.data.headers.customHeaders = $scope.data.headers.customHeaders.map((x) => {
           return {
             ...x,
