@@ -13,10 +13,9 @@ angular.module('page', [])
   .controller('PageController', function ($scope) {
 
     const messageHub = new FramesMessageHub();
-    let contents;
 
     function getResource(thePath) {
-      let xhr = new XMLHttpRequest();
+      const xhr = new XMLHttpRequest();
       xhr.open('GET', thePath, false);
       xhr.send();
       if (xhr.status === 200) {
@@ -69,7 +68,7 @@ angular.module('page', [])
 
     function load() {
       getViewParameters();
-      contents = loadContents($scope.file);
+      const contents = loadContents($scope.file);
       $scope.data = JSON.parse(contents);
       $scope.anonymousConnectionAllowed = $scope.data.anonymous_connection ? true : false;
       $scope.allAllowedMethods = ["GET", "POST", "HEAD", "OPTIONS"];
